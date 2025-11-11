@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fystyle Productos</title>
+
+  <!-- Bootstrap e íconos -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.1/font/bootstrap-icons.min.css" rel="stylesheet" />
+
+  <!-- Archivos PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#014421" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <style>
+    body { background-color: #F5F5F5; }
+    .header-bar { background-color: #014421; height: 200px; display: flex; align-items: center; justify-content: center; color: white; }
+    .btn-custom { background-color: #C0C0C0; color: black; border: none; }
+    .thumb { height: 70px; object-fit: cover; border-radius: .35rem; }
+    .thumbs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: .5rem; }
+    .card-header { background-color: #014421 !important; }
+
+    #btnInstall { position: fixed; right: 16px; bottom: 16px; background: #014421; color: white; border: 0; border-radius: 10px; padding: 12px 16px; }
+    #btnInstall[hidden] { display: none; }
+  </style>
+</head>
+
+<body>
+  <!-- Encabezado -->
+  <div class="header-bar">
+    <h1 class="display-6 mb-0">Fystyle Productos</h1>
+  </div>
+
+  <!-- Botones -->
+  <div class="container py-5 text-center">
+    <button type="button" class="btn btn-custom btn-lg" data-bs-toggle="modal" data-bs-target="#productoModal">Registrar nuevo producto</button>
+    <button id="clearAll" class="btn btn-custom btn-lg ms-2">Limpiar todo (LocalStorage)</button>
+  </div>
+
+  <!-- Contenedor productos -->
+  <div id="productsContainer" class="row mt-5"></div>
+
+  <!-- Modal producto -->
+  <div class="modal fade" id="productoModal" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header" style="background-color:#014421; color:white;">
+          <h5 class="modal-title">Registrar nuevo producto</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body p-4">
+          <form id="productoForm">
+            <div class="row g-3">
+              <div class="col-md-6"><label class="form-label">Producto</label><input type="text" class="form-control" id="producto" required></div>
+              <div class="col-md-6"><label class="form-label">Clave</label><input type="text" class="form-control" id="clave" required></div>
+              <div class="col-md-6"><label class="form-label">Nombre</label><input type="text" class="form-control" id="nombre" required></div>
+              <div class="col-md-6"><label class="form-label">Precio</label><input type="number" class="form-control" id="precio"placeholder="0.00" step="0.01" required></div>
+              <div class="col-md-6"><label class="form-label">Stock</label><input type="number" class="form-control" id="stock" required></div>
+              <div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" id="descripcion"></textarea></div>
+              <div class="col-12"><label class="form-label">Imágenes</label><input type="file" id="imagenes" class="form-control" accept="image/*" multiple></div>
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" form="productoForm" class="btn btn-custom">Guardar producto</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Botón instalar app -->
+  <button id="btnInstall" hidden>Instalar app</button>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /*Variables*/
+    const modal = new bootstrap.Modal(document.getElementById('productoModal'));
+    const LS_KEY = 'productos';
+    let productos = [];
+
+    /* Guardar en LocalStorage*/
+    function saveToLS() { localStorage.setItem(LS_KEY, JSON.stringify(productos)); }
+
+    /*Cargar desde LocalStorage*/
+    function loadFromLS() { productos = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
+
+    /*Mostrar productos*/
+    function renderProducts() {
+      const c = document.getElementById('productsContainer');
+      c.innerHTML = '';
+      productos.forEach((p, i) => {
+        const thumbs = (p.imagenes || []).slice(0, 3).map(img => `<img class="thumb w-100" src="${img.dataURL}">`).join('');
+        c.innerHTML += `
+          <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card shadow-sm">
+              <div class="card-header text-white d-flex justify-content-between">
+                <h5>${p.nombre}</h5>
+                <button class="btn btn-light btn-sm" onclick="deleteProduct(${i})"><i class='bi bi-trash3'></i></button>
+              </div>
+              <div class="card-body">
+                <p><strong>Producto:</strong> ${p.producto}</p>
+                <p><strong>Precio:</strong> $${p.precio.toFixed(2)}</p>
+                <p><strong>Stock:</strong> ${p.stock}</p>
+                ${thumbs ? `<div class='thumbs-grid mt-2'>${thumbs}</div>` : '<em>Sin imágenes</em>'}
+              </div>
+            </div>
+          </div>`;
+      });
+    }
+
+    /*Eliminar producto*/ 
+    function deleteProduct(i) {
+      if (confirm(`¿Eliminar "${productos[i].nombre}"?`)) {
+        productos.splice(i, 1);
+        saveToLS(); renderProducts();
+      }
+    }
+
+    /* Guardar nuevo producto*/ 
+    document.getElementById('productoForm').addEventListener('submit', async e => {
+      e.preventDefault();
+      const files = Array.from(document.getElementById('imagenes').files);
+      const imagenes = await Promise.all(files.map(f => new Promise(r => {
+        const fr = new FileReader();
+        fr.onload = () => r({dataURL: fr.result});
+        fr.readAsDataURL(f);
+      })));
+      productos.push({
+        producto: producto.value, clave: clave.value, nombre: nombre.value,
+        precio: parseFloat(precio.value), stock: parseInt(stock.value),
+        descripcion: descripcion.value, imagenes
+      });
+      saveToLS(); renderProducts(); e.target.reset(); modal.hide();
+    });
+
+     /*Iniciar*/ 
+    document.addEventListener('DOMContentLoaded', () => {
+      loadFromLS(); renderProducts();
+      document.getElementById('clearAll').addEventListener('click', () => {
+        if (confirm('¿Borrar todos los productos?')) {
+          productos = []; saveToLS(); renderProducts();
+        }
+      });
+    });
+
+     /*Registrar Service Worker*/ 
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+    }
+
+    /*Instalación PWA*/ 
+    let deferredPrompt = null;
+    window.addEventListener('beforeinstallprompt', e => {
+      e.preventDefault(); deferredPrompt = e; btnInstall.hidden = false;
+    });
+    btnInstall.addEventListener('click', async () => {
+      deferredPrompt.prompt(); await deferredPrompt.userChoice; btnInstall.hidden = true;
+    });
+  </script>
+</body>
+</html>
